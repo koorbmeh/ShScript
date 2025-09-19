@@ -168,25 +168,32 @@ CreateDefaultConfig() {
     global ConfigFile
     
     defaultConfig := "; ShScript Configuration File`n"
-    defaultConfig .= "; Edit these settings as needed - do not edit the main script`n`n"
+    defaultConfig .= "; Edit these settings as needed - do not edit the main script`n"
+    defaultConfig .= "; Press Ctrl+Shift+F1 while the script is running to see the Hotkey Legend`n`n"
+    defaultConfig .= "; *** IMPORTANT SETUP INSTRUCTIONS ***`n"
+    defaultConfig .= "; You MUST either:`n"
+    defaultConfig .= "; 1) Update the GamePath below to point to your Stormhalter folder, OR`n"
+    defaultConfig .= "; 2) Place this script in the same folder as Kesmai.Client.exe`n"
+    defaultConfig .= "; The script will automatically check both locations`n`n"
     
     defaultConfig .= "[GAME SETTINGS]`n"
     defaultConfig .= "GamePath=C:\Program Files\Kesmai\`n"
     defaultConfig .= "GameExecutable=Kesmai.Client.exe`n"
     defaultConfig .= "AutoClickLogin=true`n"
-    defaultConfig .= "LoginButtonX=0`n"
-    defaultConfig .= "LoginButtonY=0`n"
+    defaultConfig .= "; Set login button coordinates with Ctrl+Shift+L hotkey`n"
+    defaultConfig .= "LoginButtonX=945`n"
+    defaultConfig .= "LoginButtonY=715`n"
     defaultConfig .= "AutoCloseOnClientExit=true`n"
     defaultConfig .= "UseSecondaryMonitor=true`n"
-    defaultConfig .= "SecondaryMonitorNumber=2`n"
+    defaultConfig .= "SecondaryMonitorNumber=3`n"
     defaultConfig .= "AutoMaximizeWindow=true`n`n"
     
     defaultConfig .= "[TIMING SETTINGS]`n"
-    defaultConfig .= "ShortDelay=25`n"
-    defaultConfig .= "MediumDelay=50`n"
-    defaultConfig .= "LongDelay=100`n"
-    defaultConfig .= "TooltipDisplayTime=2000`n"
-    defaultConfig .= "AutoLoopInterval=100`n`n"
+    defaultConfig .= "ShortDelay=32`n"
+    defaultConfig .= "MediumDelay=64`n"
+    defaultConfig .= "LongDelay=128`n"
+    defaultConfig .= "TooltipDisplayTime=2048`n"
+    defaultConfig .= "AutoLoopInterval=128`n`n"
     
     defaultConfig .= "[LOGGING SETTINGS]`n"
     defaultConfig .= "EnableDebugLogging=false`n"
@@ -196,6 +203,7 @@ CreateDefaultConfig() {
     defaultConfig .= "[CHARACTER PROFILES]`n"
     defaultConfig .= "MaxProfiles=9`n"
     defaultConfig .= "CurrentProfile=1`n"
+    defaultConfig .= "; Rename profiles with Ctrl+Shift+N hotkey`n"
     defaultConfig .= "Profile1Name=Profile 1`n"
     defaultConfig .= "Profile2Name=Profile 2`n"
     defaultConfig .= "Profile3Name=Profile 3`n"
@@ -210,23 +218,35 @@ CreateDefaultConfig() {
     Loop 9 {
         profileNum := A_Index
         defaultConfig .= "[PROFILE " . profileNum . "]`n"
+        defaultConfig .= "; Leave EnableAuto=false and toggle with Middle Mouse Button Click`n"
         defaultConfig .= "EnableAuto=false`n"
         defaultConfig .= "EnableHealthMonitoring=true`n"
         defaultConfig .= "EnableManaMonitoring=true`n"
+        defaultConfig .= "; Typically the 'fight' command key. For crossbow profiles, might be 'Nock' key`n"
         defaultConfig .= "AttackKey1=f`n"
+        defaultConfig .= "; Typically a secondary (often ranged) attack like 'throw hammer at @[distant:hostile]'`n"
         defaultConfig .= "AttackKey2=e`n"
+        defaultConfig .= "; Toggle with Ctrl+Shift+S`n"
         defaultConfig .= "EnableAttackKey2=true`n"
         defaultConfig .= "AttackSpamReduction=true`n"
         defaultConfig .= "DrinkKey=s`n"
+        defaultConfig .= "; Set coordinates with Ctrl+Shift+H hotkey`n"
+        defaultConfig .= "; Set to the point where you would want to drink a balm (e.g. about the middle of the health bar)`n"
         defaultConfig .= "HealthAreaX=780`n"
         defaultConfig .= "HealthAreaY=685`n"
+        defaultConfig .= "; Set coordinates with Ctrl+Shift+M hotkey`n"
+        defaultConfig .= "; Set to the point where you would want to use an ability (e.g. the spot that turns blue when you have 10 Qi)`n"
         defaultConfig .= "ManaAreaX=960`n"
         defaultConfig .= "ManaAreaY=640`n"
-        defaultConfig .= "CreatureAreaX=0`n"
-        defaultConfig .= "CreatureAreaY=0`n"
+        defaultConfig .= "; Set coordinates with Ctrl+Shift+C hotkey`n"
+        defaultConfig .= "; Set to a spot that will not be the color Black if creatures are presesnt`n"
+        defaultConfig .= "CreatureAreaX=1045`n"
+        defaultConfig .= "CreatureAreaY=100`n"
+        defaultConfig .= "; Toggle with Ctrl+Shift+A`n"
         defaultConfig .= "EnableMASkill=true`n"
         defaultConfig .= "MAFistsKey=r`n"
         defaultConfig .= "MARestockKey=h`n"
+        defaultConfig .= "; Toggle between 'fists' and 'restock' with Ctrl+Shift+T`n"
         defaultConfig .= "CurrentMASkill=restock`n`n"
     }
     
@@ -514,9 +534,9 @@ LoadProfileAutoSettings(profileNumber) {
     sectionName := "PROFILE " . profileNumber
     
     try {
-        EnableAuto := IniRead(ConfigFile, sectionName, "EnableAuto", EnableAuto)
-        EnableHealthMonitoring := IniRead(ConfigFile, sectionName, "EnableHealthMonitoring", EnableHealthMonitoring)
-        EnableManaMonitoring := IniRead(ConfigFile, sectionName, "EnableManaMonitoring", EnableManaMonitoring)
+        EnableAuto := (IniRead(ConfigFile, sectionName, "EnableAuto", EnableAuto ? "true" : "false") = "true")
+        EnableHealthMonitoring := (IniRead(ConfigFile, sectionName, "EnableHealthMonitoring", EnableHealthMonitoring ? "true" : "false") = "true")
+        EnableManaMonitoring := (IniRead(ConfigFile, sectionName, "EnableManaMonitoring", EnableManaMonitoring ? "true" : "false") = "true")
         AttackKey1 := IniRead(ConfigFile, sectionName, "AttackKey1", AttackKey1)
         AttackKey2 := IniRead(ConfigFile, sectionName, "AttackKey2", AttackKey2)
         EnableAttackKey2 := (IniRead(ConfigFile, sectionName, "EnableAttackKey2", EnableAttackKey2 ? "true" : "false") = "true")
@@ -549,9 +569,9 @@ SaveProfileAutoSettings(profileNumber) {
     sectionName := "PROFILE " . profileNumber
     
     try {
-        IniWrite(EnableAuto, ConfigFile, sectionName, "EnableAuto")
-        IniWrite(EnableHealthMonitoring, ConfigFile, sectionName, "EnableHealthMonitoring")
-        IniWrite(EnableManaMonitoring, ConfigFile, sectionName, "EnableManaMonitoring")
+        IniWrite(EnableAuto ? "true" : "false", ConfigFile, sectionName, "EnableAuto")
+        IniWrite(EnableHealthMonitoring ? "true" : "false", ConfigFile, sectionName, "EnableHealthMonitoring")
+        IniWrite(EnableManaMonitoring ? "true" : "false", ConfigFile, sectionName, "EnableManaMonitoring")
         IniWrite(AttackKey1, ConfigFile, sectionName, "AttackKey1")
         IniWrite(AttackKey2, ConfigFile, sectionName, "AttackKey2")
         IniWrite(EnableAttackKey2 ? "true" : "false", ConfigFile, sectionName, "EnableAttackKey2")
@@ -1080,20 +1100,23 @@ CheckReady(reset := false) {
 ; Ctrl+Shift+F1 - Show help
 ^+F1::{
     helpText := "ShScript`n`n"
+
+    helpText .= "Middle Click : Toggle Auto mode`n`n"
+
     helpText .= "Ctrl+Shift+F1 : Show this help`n"
     helpText .= "Ctrl+Shift+1-9 : Switch to profile 1-9`n"
     helpText .= "Ctrl+Shift+` : Show current profile`n"
     helpText .= "Ctrl+Shift+L : Set login button coordinates`n"
     helpText .= "Ctrl+Shift+H : Set health area coordinates`n"
     helpText .= "Ctrl+Shift+M : Set mana area coordinates`n"
-    helpText .= "Ctrl+Shift+C : Set creature area coordinates`n"
+    helpText .= "Ctrl+Shift+C : Set creature detection coordinates`n"
     helpText .= "Ctrl+Shift+N : Rename current profile`n"
+    helpText .= "Ctrl+Shift+S : Toggle second attack key`n"
     helpText .= "Ctrl+Shift+E : Swap attack keys`n"
     helpText .= "Ctrl+Shift+A : Toggle MA Skill on/off`n"
     helpText .= "Ctrl+Shift+T : Toggle MA Skill mode (fists/restock)`n"
     helpText .= "Ctrl+Shift+Q : Exit script`n`n"
-    helpText .= "Middle Click : Toggle Auto mode`n"
-    helpText .= "Ctrl+Shift+S : Toggle second attack key`n`n"
+
     helpText .= "More features coming soon..."
     
     ToolTip(helpText, , , 2)
@@ -1304,7 +1327,7 @@ MButton::{
 ; Load configuration first
 if (!LoadConfig()) {
     LogMessage("No configuration file detected, using default configuration.")
-    MsgBox("No configuration file found, using default configuration.`n`nThis is normal on first run - the config file will be created automatically.", "Configuration Notice", "OK")
+    MsgBox("No configuration file found, using default configuration.`n`nThis is normal on first run - the config file will be created automatically.`n`nCheck the ShScript_Config.ini for additional instructions.", "Configuration Notice", "OK")
 }
 
 ; Create backup after config is loaded (so debug logging setting is respected)
