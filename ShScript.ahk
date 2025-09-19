@@ -25,7 +25,8 @@ GameRunning := false
 CurrentProfile := 1
 
 ; Configuration variables (initialized with defaults)
-EnableDebugLogging := true
+EnableDebugLogging := false
+EnableBackups := false
 LogLevel := "INFO"
 TooltipDisplayTime := 2048
 ShortDelay := 32
@@ -65,13 +66,19 @@ AttackKey1 := "f"
 AttackKey2 := "e"
 EnableAttackKey2 := true
 AttackSpamReduction := true
-HealKey := "s"
+DrinkKey := "s"
 HealthAreaX := 780
 HealthAreaY := 685
 ManaAreaX := 960
 ManaAreaY := 640
 CreatureAreaX := 1045
 CreatureAreaY := 100
+
+; MASkill settings
+EnableMASkill := true
+MAFistsKey := "r"
+MARestockKey := "h"
+CurrentMASkill := "restock"
 
 ; Coin pickup settings
 EnableCoinPickup := false
@@ -96,9 +103,9 @@ CoinColorBlueMax := 123
 LoadConfig() {
     global ConfigFile
     global GamePath, GameExecutable, AutoClickLogin, LoginButtonX, LoginButtonY, AutoCloseOnClientExit, UseSecondaryMonitor, SecondaryMonitorNumber, AutoMaximizeWindow
-    global ShortDelay, MediumDelay, LongDelay, TooltipDisplayTime, AutoLoopInterval, EnableDebugLogging, LogLevel
+    global ShortDelay, MediumDelay, LongDelay, TooltipDisplayTime, AutoLoopInterval, EnableDebugLogging, EnableBackups, LogLevel
     global MaxProfiles, CurrentProfile, Profile1Name, Profile2Name, Profile3Name, Profile4Name, Profile5Name, Profile6Name, Profile7Name, Profile8Name, Profile9Name
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
 
     ; Create default config if it doesn't exist
     if (!FileExist(ConfigFile)) {
@@ -111,13 +118,13 @@ LoadConfig() {
         ; Load settings from config file using IniRead
         GamePath := IniRead(ConfigFile, "GAME SETTINGS", "GamePath", GamePath)
         GameExecutable := IniRead(ConfigFile, "GAME SETTINGS", "GameExecutable", GameExecutable)
-        AutoClickLogin := IniRead(ConfigFile, "GAME SETTINGS", "AutoClickLogin", AutoClickLogin)
+        AutoClickLogin := (IniRead(ConfigFile, "GAME SETTINGS", "AutoClickLogin", AutoClickLogin ? "true" : "false") = "true")
         LoginButtonX := IniRead(ConfigFile, "GAME SETTINGS", "LoginButtonX", LoginButtonX)
         LoginButtonY := IniRead(ConfigFile, "GAME SETTINGS", "LoginButtonY", LoginButtonY)
-        AutoCloseOnClientExit := IniRead(ConfigFile, "GAME SETTINGS", "AutoCloseOnClientExit", AutoCloseOnClientExit)
-        UseSecondaryMonitor := IniRead(ConfigFile, "GAME SETTINGS", "UseSecondaryMonitor", UseSecondaryMonitor)
+        AutoCloseOnClientExit := (IniRead(ConfigFile, "GAME SETTINGS", "AutoCloseOnClientExit", AutoCloseOnClientExit ? "true" : "false") = "true")
+        UseSecondaryMonitor := (IniRead(ConfigFile, "GAME SETTINGS", "UseSecondaryMonitor", UseSecondaryMonitor ? "true" : "false") = "true")
         SecondaryMonitorNumber := IniRead(ConfigFile, "GAME SETTINGS", "SecondaryMonitorNumber", SecondaryMonitorNumber)
-        AutoMaximizeWindow := IniRead(ConfigFile, "GAME SETTINGS", "AutoMaximizeWindow", AutoMaximizeWindow)
+        AutoMaximizeWindow := (IniRead(ConfigFile, "GAME SETTINGS", "AutoMaximizeWindow", AutoMaximizeWindow ? "true" : "false") = "true")
 
         ShortDelay := IniRead(ConfigFile, "TIMING SETTINGS", "ShortDelay", ShortDelay)
         MediumDelay := IniRead(ConfigFile, "TIMING SETTINGS", "MediumDelay", MediumDelay)
@@ -125,7 +132,8 @@ LoadConfig() {
         TooltipDisplayTime := IniRead(ConfigFile, "TIMING SETTINGS", "TooltipDisplayTime", TooltipDisplayTime)
         AutoLoopInterval := IniRead(ConfigFile, "TIMING SETTINGS", "AutoLoopInterval", AutoLoopInterval)
 
-        EnableDebugLogging := IniRead(ConfigFile, "LOGGING SETTINGS", "EnableDebugLogging", EnableDebugLogging)
+        EnableDebugLogging := (IniRead(ConfigFile, "LOGGING SETTINGS", "EnableDebugLogging", EnableDebugLogging ? "true" : "false") = "true")
+        EnableBackups := (IniRead(ConfigFile, "LOGGING SETTINGS", "EnableBackups", EnableBackups ? "true" : "false") = "true")
         LogLevel := IniRead(ConfigFile, "LOGGING SETTINGS", "LogLevel", LogLevel)
 
         ; Load character profile settings
@@ -181,7 +189,8 @@ CreateDefaultConfig() {
     defaultConfig .= "AutoLoopInterval=100`n`n"
     
     defaultConfig .= "[LOGGING SETTINGS]`n"
-    defaultConfig .= "EnableDebugLogging=true`n"
+    defaultConfig .= "EnableDebugLogging=false`n"
+    defaultConfig .= "EnableBackups=false`n"
     defaultConfig .= "LogLevel=INFO`n`n"
     
     defaultConfig .= "[CHARACTER PROFILES]`n"
@@ -208,13 +217,17 @@ CreateDefaultConfig() {
         defaultConfig .= "AttackKey2=e`n"
         defaultConfig .= "EnableAttackKey2=true`n"
         defaultConfig .= "AttackSpamReduction=true`n"
-        defaultConfig .= "HealKey=s`n"
+        defaultConfig .= "DrinkKey=s`n"
         defaultConfig .= "HealthAreaX=780`n"
         defaultConfig .= "HealthAreaY=685`n"
         defaultConfig .= "ManaAreaX=960`n"
         defaultConfig .= "ManaAreaY=640`n"
         defaultConfig .= "CreatureAreaX=0`n"
-        defaultConfig .= "CreatureAreaY=0`n`n"
+        defaultConfig .= "CreatureAreaY=0`n"
+        defaultConfig .= "EnableMASkill=true`n"
+        defaultConfig .= "MAFistsKey=r`n"
+        defaultConfig .= "MARestockKey=h`n"
+        defaultConfig .= "CurrentMASkill=restock`n`n"
     }
     
     defaultConfig .= "[COIN PICKUP SETTINGS]`n"
@@ -279,7 +292,11 @@ LogMessage(message, level := "INFO") {
 
 ; Function to create backup of script and config
 CreateBackup() {
-    global BackupFolder, ConfigFile
+    global BackupFolder, ConfigFile, EnableBackups
+    
+    if (!EnableBackups) {
+        return true
+    }
     
     try {
         ; Create backup folder if it doesn't exist
@@ -492,7 +509,7 @@ GetProfileName(profileNumber) {
 ; Function to load auto settings for a specific profile
 LoadProfileAutoSettings(profileNumber) {
     global ConfigFile
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, HealKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
     
     sectionName := "PROFILE " . profileNumber
     
@@ -504,13 +521,17 @@ LoadProfileAutoSettings(profileNumber) {
         AttackKey2 := IniRead(ConfigFile, sectionName, "AttackKey2", AttackKey2)
         EnableAttackKey2 := (IniRead(ConfigFile, sectionName, "EnableAttackKey2", EnableAttackKey2 ? "true" : "false") = "true")
         AttackSpamReduction := (IniRead(ConfigFile, sectionName, "AttackSpamReduction", AttackSpamReduction ? "true" : "false") = "true")
-        HealKey := IniRead(ConfigFile, sectionName, "HealKey", HealKey)
+        DrinkKey := IniRead(ConfigFile, sectionName, "DrinkKey", DrinkKey)
         HealthAreaX := IniRead(ConfigFile, sectionName, "HealthAreaX", HealthAreaX)
         HealthAreaY := IniRead(ConfigFile, sectionName, "HealthAreaY", HealthAreaY)
         ManaAreaX := IniRead(ConfigFile, sectionName, "ManaAreaX", ManaAreaX)
         ManaAreaY := IniRead(ConfigFile, sectionName, "ManaAreaY", ManaAreaY)
         CreatureAreaX := IniRead(ConfigFile, sectionName, "CreatureAreaX", CreatureAreaX)
         CreatureAreaY := IniRead(ConfigFile, sectionName, "CreatureAreaY", CreatureAreaY)
+        EnableMASkill := (IniRead(ConfigFile, sectionName, "EnableMASkill", EnableMASkill ? "true" : "false") = "true")
+        MAFistsKey := IniRead(ConfigFile, sectionName, "MAFistsKey", MAFistsKey)
+        MARestockKey := IniRead(ConfigFile, sectionName, "MARestockKey", MARestockKey)
+        CurrentMASkill := IniRead(ConfigFile, sectionName, "CurrentMASkill", CurrentMASkill)
         
         LogMessage("Loaded auto settings for profile " . profileNumber . " - " . GetProfileName(profileNumber))
         return true
@@ -523,7 +544,7 @@ LoadProfileAutoSettings(profileNumber) {
 ; Function to save auto settings for a specific profile
 SaveProfileAutoSettings(profileNumber) {
     global ConfigFile
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, HealKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
     
     sectionName := "PROFILE " . profileNumber
     
@@ -535,13 +556,17 @@ SaveProfileAutoSettings(profileNumber) {
         IniWrite(AttackKey2, ConfigFile, sectionName, "AttackKey2")
         IniWrite(EnableAttackKey2 ? "true" : "false", ConfigFile, sectionName, "EnableAttackKey2")
         IniWrite(AttackSpamReduction ? "true" : "false", ConfigFile, sectionName, "AttackSpamReduction")
-        IniWrite(HealKey, ConfigFile, sectionName, "HealKey")
+        IniWrite(DrinkKey, ConfigFile, sectionName, "DrinkKey")
         IniWrite(HealthAreaX, ConfigFile, sectionName, "HealthAreaX")
         IniWrite(HealthAreaY, ConfigFile, sectionName, "HealthAreaY")
         IniWrite(ManaAreaX, ConfigFile, sectionName, "ManaAreaX")
         IniWrite(ManaAreaY, ConfigFile, sectionName, "ManaAreaY")
         IniWrite(CreatureAreaX, ConfigFile, sectionName, "CreatureAreaX")
         IniWrite(CreatureAreaY, ConfigFile, sectionName, "CreatureAreaY")
+        IniWrite(EnableMASkill ? "true" : "false", ConfigFile, sectionName, "EnableMASkill")
+        IniWrite(MAFistsKey, ConfigFile, sectionName, "MAFistsKey")
+        IniWrite(MARestockKey, ConfigFile, sectionName, "MARestockKey")
+        IniWrite(CurrentMASkill, ConfigFile, sectionName, "CurrentMASkill")
         
         LogMessage("Saved auto settings for profile " . profileNumber . " - " . GetProfileName(profileNumber))
         return true
@@ -752,14 +777,19 @@ AutoLoop() {
 
 ; Determine the next action based on priority
 GetNextAction() {
-    global EnableHealthMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction
+    global EnableHealthMonitoring, EnableManaMonitoring, EnableMASkill, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction
     
     ; Priority 1: Health is low - heal immediately
     if (EnableHealthMonitoring && !CheckHealth()) {
         return "HEAL"
     }
     
-    ; Priority 2: Attack - if we have attack keys configured
+    ; Priority 2: MASkill - if enabled and has mana
+    if (EnableMASkill && EnableManaMonitoring && CheckMana()) {
+        return "MASKILL"
+    }
+    
+    ; Priority 3: Attack - if we have attack keys configured
     if (AttackKey1 != "" || (EnableAttackKey2 && AttackKey2 != "")) {
         ; Check if AttackSpamReduction is enabled and creatures are present
         if (AttackSpamReduction && !CheckCreatures()) {
@@ -775,23 +805,52 @@ GetNextAction() {
 
 ; Execute the determined action
 ExecuteAction(action) {
-    global AttackKey1, AttackKey2, EnableAttackKey2, HealKey
+    global AttackKey1, AttackKey2, EnableAttackKey2, DrinkKey, MAFistsKey, MARestockKey, CurrentMASkill
     
     switch action {
         case "HEAL":
-            if (HealKey != "") {
-                SendKey(HealKey)
-                LogMessage("Auto: Executed heal action")
+            if (DrinkKey != "") {
+                SendKey(DrinkKey)
+                LogMessage("Auto: Executed drink action")
+            }
+        case "MASKILL":
+            if (CurrentMASkill = "fists") {
+                ; Send MAFistsKey then AttackKey2 (if enabled)
+                if (MAFistsKey != "") {
+                    SendKey(MAFistsKey)
+                }
+                if (EnableAttackKey2 && AttackKey2 != "") {
+                    Sleep(ShortDelay)  ; Delay between keys
+                    SendKey(AttackKey2)
+                }
+                LogMessage("Auto: Executed MA Fists action")
+            } else if (CurrentMASkill = "restock") {
+                ; Send MARestockKey then AttackKey1 and AttackKey2 (if enabled)
+                if (MARestockKey != "") {
+                    SendKey(MARestockKey)
+                }
+                if (AttackKey1 != "") {
+                    Sleep(ShortDelay)  ; Delay between keys
+                    SendKey(AttackKey1)
+                }
+                if (EnableAttackKey2 && AttackKey2 != "") {
+                    Sleep(ShortDelay)  ; Delay between keys
+                    SendKey(AttackKey2)
+                }
+                LogMessage("Auto: Executed MA Restock action")
             }
         case "ATTACK":
             ; Send both attack keys in sequence (e.g. melee & ranged)
             if (AttackKey1 != "") {
+                LogMessage("Auto: Sending AttackKey1: " . AttackKey1)
                 SendKey(AttackKey1)
             }
             if (EnableAttackKey2 && AttackKey2 != "") {
+                Sleep(ShortDelay)  ; Delay between keys
+                LogMessage("Auto: Sending AttackKey2: " . AttackKey2)
                 SendKey(AttackKey2)
             }
-            LogMessage("Auto: Pressed attack keys")
+            LogMessage("Auto: Completed attack sequence")
     }
 }
 
@@ -844,9 +903,9 @@ IsGameRunning() {
     return WinExist(GameWindowTitle)
 }
 
-; Function to count red pixels at given coordinates
-CountRedPixels(x, y) {
-    redPixelCount := 0
+; Function to count pixels of a specific color at given coordinates
+CountPixels(x, y, colorType) {
+    pixelCount := 0
     for offset in [-1, 0, 1] {
         pixelX := x + offset
         pixelY := y
@@ -854,11 +913,28 @@ CountRedPixels(x, y) {
         red := (color >> 16) & 0xFF
         green := (color >> 8) & 0xFF
         blue := color & 0xFF
-        if (red > 100 && green < 50 && blue < 50) {
-            redPixelCount++
+        
+        if (colorType = "red") {
+            if (red > 100 && green < 50 && blue < 50) {
+                pixelCount++
+            }
+        } else if (colorType = "blue") {
+            if (blue > 100 && red < 50 && green < 50) {
+                pixelCount++
+            }
         }
     }
-    return redPixelCount
+    return pixelCount
+}
+
+; Function to count red pixels at given coordinates (for health)
+CountRedPixels(x, y) {
+    return CountPixels(x, y, "red")
+}
+
+; Function to count blue pixels at given coordinates (for mana)
+CountBluePixels(x, y) {
+    return CountPixels(x, y, "blue")
 }
 
 ; Function to check health status by examining red pixels
@@ -882,6 +958,31 @@ CheckHealth() {
         
     } catch Error as e {
         LogMessage("Error checking health: " . e.Message)
+        return false
+    }
+}
+
+; Function to check mana status by examining blue pixels
+CheckMana() {
+    global ManaAreaX, ManaAreaY, GameWindowTitle
+    
+    if (!IsGameRunning()) {
+        LogMessage("Cannot check mana - game not running")
+        return false
+    }
+    
+    try {
+        bluePixelCount := CountBluePixels(ManaAreaX, ManaAreaY)
+        
+        ; Consider sufficient mana if at least 2 out of 3 pixels are blue
+        hasMana := bluePixelCount >= 2
+        
+        LogMessage("Mana check - Blue pixels: " . bluePixelCount . "/3, Has Mana: " . (hasMana ? "Yes" : "No"))
+        
+        return hasMana
+        
+    } catch Error as e {
+        LogMessage("Error checking mana: " . e.Message)
         return false
     }
 }
@@ -976,18 +1077,20 @@ CheckReady(reset := false) {
 ; HOTKEYS
 ; ========================================
 
-; Ctrl+Shift+H - Show help
-^+h::{
+; Ctrl+Shift+F1 - Show help
+^+F1::{
     helpText := "ShScript`n`n"
-    helpText .= "Ctrl+Shift+H : Show this help`n"
+    helpText .= "Ctrl+Shift+F1 : Show this help`n"
     helpText .= "Ctrl+Shift+1-9 : Switch to profile 1-9`n"
     helpText .= "Ctrl+Shift+` : Show current profile`n"
     helpText .= "Ctrl+Shift+L : Set login button coordinates`n"
-    helpText .= "Ctrl+Shift+R : Set health area coordinates`n"
-    helpText .= "Ctrl+Shift+B : Set mana area coordinates`n"
+    helpText .= "Ctrl+Shift+H : Set health area coordinates`n"
+    helpText .= "Ctrl+Shift+M : Set mana area coordinates`n"
     helpText .= "Ctrl+Shift+C : Set creature area coordinates`n"
     helpText .= "Ctrl+Shift+N : Rename current profile`n"
     helpText .= "Ctrl+Shift+E : Swap attack keys`n"
+    helpText .= "Ctrl+Shift+A : Toggle MA Skill on/off`n"
+    helpText .= "Ctrl+Shift+T : Toggle MA Skill mode (fists/restock)`n"
     helpText .= "Ctrl+Shift+Q : Exit script`n`n"
     helpText .= "Middle Click : Toggle Auto mode`n"
     helpText .= "Ctrl+Shift+S : Toggle second attack key`n`n"
@@ -1016,8 +1119,8 @@ CheckReady(reset := false) {
     LogMessage("Login button coordinates set to " . LoginButtonX . "," . LoginButtonY)
 }
 
-; Ctrl+Shift+R - Set health area coordinates for current profile
-^+r::{
+; Ctrl+Shift+H - Set health area coordinates for current profile
+^+h::{
     global HealthAreaX, HealthAreaY, CurrentProfile
     
     MouseGetPos(&mouseX, &mouseY)
@@ -1035,8 +1138,8 @@ CheckReady(reset := false) {
     LogMessage("Health area coordinates set to " . HealthAreaX . "," . HealthAreaY . " for profile " . CurrentProfile . " - Red pixels: " . redPixelCount . "/3")
 }
 
-; Ctrl+Shift+B - Set mana area coordinates for current profile
-^+b::{
+; Ctrl+Shift+M - Set mana area coordinates for current profile
+^+m::{
     global ManaAreaX, ManaAreaY, CurrentProfile
     
     MouseGetPos(&mouseX, &mouseY)
@@ -1159,18 +1262,53 @@ MButton::{
     LogMessage("Attack keys swapped for profile " . CurrentProfile . " - Primary: " . AttackKey1 . ", Secondary: " . AttackKey2)
 }
 
+; Ctrl+Shift+A - Toggle EnableMASkill
+^+a::{
+    global EnableMASkill, CurrentProfile
+    
+    EnableMASkill := !EnableMASkill
+    status := EnableMASkill ? "ENABLED" : "DISABLED"
+    
+    ; Save to current profile
+    SaveProfileAutoSettings(CurrentProfile)
+    
+    ToolTip("MA Skill " . status . " for " . GetProfileName(CurrentProfile), , , 18)
+    SetTimer(() => ToolTip(, , , 18), -TooltipDisplayTime)
+    
+    LogMessage("MA Skill " . status . " for profile " . CurrentProfile . " - " . GetProfileName(CurrentProfile))
+}
+
+; Ctrl+Shift+T - Toggle CurrentMASkill between fists and restock
+^+t::{
+    global CurrentMASkill, CurrentProfile
+    
+    if (CurrentMASkill = "fists") {
+        CurrentMASkill := "restock"
+    } else {
+        CurrentMASkill := "fists"
+    }
+    
+    ; Save to current profile
+    SaveProfileAutoSettings(CurrentProfile)
+    
+    ToolTip("MA Skill mode: " . CurrentMASkill . " for " . GetProfileName(CurrentProfile), , , 19)
+    SetTimer(() => ToolTip(, , , 19), -TooltipDisplayTime)
+    
+    LogMessage("MA Skill mode changed to " . CurrentMASkill . " for profile " . CurrentProfile . " - " . GetProfileName(CurrentProfile))
+}
+
 ; ========================================
 ; SCRIPT EXECUTION
 ; ========================================
 
-; Create backup before starting
-CreateBackup()
-
-; Load configuration
+; Load configuration first
 if (!LoadConfig()) {
     LogMessage("No configuration file detected, using default configuration.")
     MsgBox("No configuration file found, using default configuration.`n`nThis is normal on first run - the config file will be created automatically.", "Configuration Notice", "OK")
 }
+
+; Create backup after config is loaded (so debug logging setting is respected)
+CreateBackup()
 
 ; Log script startup
 LogMessage("ShScript started")
