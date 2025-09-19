@@ -35,7 +35,7 @@ LongDelay := 128
 AutoLoopInterval := 100
 
 ; Game settings
-GamePath := "C:\Program Files\Kesmai\"
+GamePath := "C:\Program Files\Stormhalter\"
 GameExecutable := "Kesmai.Client.exe"
 AutoClickLogin := true
 LoginButtonX := 950
@@ -80,6 +80,10 @@ MAFistsKey := "r"
 MARestockKey := "h"
 CurrentMASkill := "restock"
 
+; Knight Heal settings
+EnableKnightHeal := false
+KnightHealKey := "d"
+
 ; Coin pickup settings
 EnableCoinPickup := false
 MoneyRingKey := "t"
@@ -105,7 +109,7 @@ LoadConfig() {
     global GamePath, GameExecutable, AutoClickLogin, LoginButtonX, LoginButtonY, AutoCloseOnClientExit, UseSecondaryMonitor, SecondaryMonitorNumber, AutoMaximizeWindow
     global ShortDelay, MediumDelay, LongDelay, TooltipDisplayTime, AutoLoopInterval, EnableDebugLogging, EnableBackups, LogLevel
     global MaxProfiles, CurrentProfile, Profile1Name, Profile2Name, Profile3Name, Profile4Name, Profile5Name, Profile6Name, Profile7Name, Profile8Name, Profile9Name
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill, EnableKnightHeal, KnightHealKey
 
     ; Create default config if it doesn't exist
     if (!FileExist(ConfigFile)) {
@@ -177,7 +181,7 @@ CreateDefaultConfig() {
     defaultConfig .= "; The script will automatically check both locations`n`n"
     
     defaultConfig .= "[GAME SETTINGS]`n"
-    defaultConfig .= "GamePath=C:\Program Files\Kesmai\`n"
+    defaultConfig .= "GamePath=C:\Program Files\Stormhalter\`n"
     defaultConfig .= "GameExecutable=Kesmai.Client.exe`n"
     defaultConfig .= "AutoClickLogin=true`n"
     defaultConfig .= "; Set login button coordinates with Ctrl+Shift+L hotkey`n"
@@ -239,7 +243,7 @@ CreateDefaultConfig() {
         defaultConfig .= "ManaAreaX=960`n"
         defaultConfig .= "ManaAreaY=640`n"
         defaultConfig .= "; Set coordinates with Ctrl+Shift+C hotkey`n"
-        defaultConfig .= "; Set to a spot that will not be the color Black if creatures are presesnt`n"
+        defaultConfig .= "; Set to a spot on the creature list that will NOT be black if creatures are presesnt`n"
         defaultConfig .= "CreatureAreaX=1045`n"
         defaultConfig .= "CreatureAreaY=100`n"
         defaultConfig .= "; Toggle with Ctrl+Shift+A`n"
@@ -247,7 +251,10 @@ CreateDefaultConfig() {
         defaultConfig .= "MAFistsKey=r`n"
         defaultConfig .= "MARestockKey=h`n"
         defaultConfig .= "; Toggle between 'fists' and 'restock' with Ctrl+Shift+T`n"
-        defaultConfig .= "CurrentMASkill=restock`n`n"
+        defaultConfig .= "CurrentMASkill=restock`n"
+        defaultConfig .= "; Toggle with Ctrl+Shift+K`n"
+        defaultConfig .= "EnableKnightHeal=false`n"
+        defaultConfig .= "KnightHealKey=d`n`n"
     }
     
     defaultConfig .= "[COIN PICKUP SETTINGS]`n"
@@ -529,7 +536,7 @@ GetProfileName(profileNumber) {
 ; Function to load auto settings for a specific profile
 LoadProfileAutoSettings(profileNumber) {
     global ConfigFile
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill, EnableKnightHeal, KnightHealKey
     
     sectionName := "PROFILE " . profileNumber
     
@@ -552,6 +559,8 @@ LoadProfileAutoSettings(profileNumber) {
         MAFistsKey := IniRead(ConfigFile, sectionName, "MAFistsKey", MAFistsKey)
         MARestockKey := IniRead(ConfigFile, sectionName, "MARestockKey", MARestockKey)
         CurrentMASkill := IniRead(ConfigFile, sectionName, "CurrentMASkill", CurrentMASkill)
+        EnableKnightHeal := (IniRead(ConfigFile, sectionName, "EnableKnightHeal", EnableKnightHeal ? "true" : "false") = "true")
+        KnightHealKey := IniRead(ConfigFile, sectionName, "KnightHealKey", KnightHealKey)
         
         LogMessage("Loaded auto settings for profile " . profileNumber . " - " . GetProfileName(profileNumber))
         return true
@@ -564,7 +573,7 @@ LoadProfileAutoSettings(profileNumber) {
 ; Function to save auto settings for a specific profile
 SaveProfileAutoSettings(profileNumber) {
     global ConfigFile
-    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill
+    global EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill, EnableKnightHeal, KnightHealKey
     
     sectionName := "PROFILE " . profileNumber
     
@@ -587,6 +596,8 @@ SaveProfileAutoSettings(profileNumber) {
         IniWrite(MAFistsKey, ConfigFile, sectionName, "MAFistsKey")
         IniWrite(MARestockKey, ConfigFile, sectionName, "MARestockKey")
         IniWrite(CurrentMASkill, ConfigFile, sectionName, "CurrentMASkill")
+        IniWrite(EnableKnightHeal ? "true" : "false", ConfigFile, sectionName, "EnableKnightHeal")
+        IniWrite(KnightHealKey, ConfigFile, sectionName, "KnightHealKey")
         
         LogMessage("Saved auto settings for profile " . profileNumber . " - " . GetProfileName(profileNumber))
         return true
@@ -745,18 +756,30 @@ RenameCurrentProfileDialog() {
 
 ; Function to show current profile info (hotkey helper)
 ShowCurrentProfileInfo() {
-    global CurrentProfile, EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2
+    global CurrentProfile, EnableAuto, EnableHealthMonitoring, EnableManaMonitoring, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, DrinkKey, HealthAreaX, HealthAreaY, ManaAreaX, ManaAreaY, CreatureAreaX, CreatureAreaY, EnableMASkill, MAFistsKey, MARestockKey, CurrentMASkill, EnableKnightHeal, KnightHealKey
     
     profileName := GetProfileName(CurrentProfile)
     autoStatus := EnableAuto ? "Enabled" : "Disabled"
     healthStatus := EnableHealthMonitoring ? "Enabled" : "Disabled"
     manaStatus := EnableManaMonitoring ? "Enabled" : "Disabled"
+    knightHealStatus := EnableKnightHeal ? "Enabled" : "Disabled"
+    maSkillStatus := EnableMASkill ? "Enabled" : "Disabled"
+    attackKey2Status := EnableAttackKey2 ? "Enabled" : "Disabled"
+    spamReductionStatus := AttackSpamReduction ? "Enabled" : "Disabled"
     
     info := "Current Profile: " . CurrentProfile . " - " . profileName . "`n"
     info .= "Auto: " . autoStatus . "`n"
-    info .= "Health Monitor: " . healthStatus . "`n"
+    info .= "Health Monitor: " . healthStatus . " (Key: " . DrinkKey . ")`n"
     info .= "Mana Monitor: " . manaStatus . "`n"
-    info .= "Attack Keys: " . AttackKey1 . ", " . AttackKey2
+    info .= "Knight Heal: " . knightHealStatus . " (Key: " . KnightHealKey . ")`n"
+    info .= "Attack Keys: " . AttackKey1 . (EnableAttackKey2 ? ", " . AttackKey2 : "") . "`n"
+    info .= "Attack Key 2: " . attackKey2Status . "`n"
+    info .= "Creature Detection: " . spamReductionStatus . "`n"
+    info .= "MA Skill: " . maSkillStatus . " (Mode: " . CurrentMASkill . ")`n"
+    info .= "MA Keys: " . MAFistsKey . ", " . MARestockKey . "`n"
+    info .= "Health Area: " . HealthAreaX . ", " . HealthAreaY . "`n"
+    info .= "Mana Area: " . ManaAreaX . ", " . ManaAreaY . "`n"
+    info .= "Creature Area: " . CreatureAreaX . ", " . CreatureAreaY
     
     ToolTip(info, , , 13)
     SetTimer(() => ToolTip(, , , 13), -TooltipDisplayTime * 2)
@@ -797,7 +820,7 @@ AutoLoop() {
 
 ; Determine the next action based on priority
 GetNextAction() {
-    global EnableHealthMonitoring, EnableManaMonitoring, EnableMASkill, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction
+    global EnableHealthMonitoring, EnableManaMonitoring, EnableMASkill, AttackKey1, AttackKey2, EnableAttackKey2, AttackSpamReduction, EnableKnightHeal, KnightHealKey, DrinkKey
     
     ; Priority 1: Health is low - heal immediately
     if (EnableHealthMonitoring && !CheckHealth()) {
@@ -825,13 +848,19 @@ GetNextAction() {
 
 ; Execute the determined action
 ExecuteAction(action) {
-    global AttackKey1, AttackKey2, EnableAttackKey2, DrinkKey, MAFistsKey, MARestockKey, CurrentMASkill
+    global AttackKey1, AttackKey2, EnableAttackKey2, DrinkKey, MAFistsKey, MARestockKey, CurrentMASkill, EnableKnightHeal, KnightHealKey
     
     switch action {
         case "HEAL":
-            if (DrinkKey != "") {
+            ; Check if Knight Heal is enabled and we have mana
+            if (EnableKnightHeal && CheckMana()) {
+                if (KnightHealKey != "") {
+                    SendKey(KnightHealKey)
+                    LogMessage("Auto: Executed Knight Heal (mana-based heal)")
+                }
+            } else if (DrinkKey != "") {
                 SendKey(DrinkKey)
-                LogMessage("Auto: Executed drink action")
+                LogMessage("Auto: Executed drink action" . (EnableKnightHeal ? " (no mana for Knight Heal)" : ""))
             }
         case "MASKILL":
             if (CurrentMASkill = "fists") {
@@ -1115,6 +1144,7 @@ CheckReady(reset := false) {
     helpText .= "Ctrl+Shift+E : Swap attack keys`n"
     helpText .= "Ctrl+Shift+A : Toggle MA Skill on/off`n"
     helpText .= "Ctrl+Shift+T : Toggle MA Skill mode (fists/restock)`n"
+    helpText .= "Ctrl+Shift+K : Toggle Knight Heal on/off`n"
     helpText .= "Ctrl+Shift+Q : Exit script`n`n"
 
     helpText .= "More features coming soon..."
@@ -1318,6 +1348,22 @@ MButton::{
     SetTimer(() => ToolTip(, , , 19), -TooltipDisplayTime)
     
     LogMessage("MA Skill mode changed to " . CurrentMASkill . " for profile " . CurrentProfile . " - " . GetProfileName(CurrentProfile))
+}
+
+; Ctrl+Shift+K - Toggle EnableKnightHeal
+^+k::{
+    global EnableKnightHeal, CurrentProfile
+    
+    EnableKnightHeal := !EnableKnightHeal
+    status := EnableKnightHeal ? "ENABLED" : "DISABLED"
+    
+    ; Save to current profile
+    SaveProfileAutoSettings(CurrentProfile)
+    
+    ToolTip("Knight Heal " . status . " for " . GetProfileName(CurrentProfile), , , 20)
+    SetTimer(() => ToolTip(, , , 20), -TooltipDisplayTime)
+    
+    LogMessage("Knight Heal " . status . " for profile " . CurrentProfile . " - " . GetProfileName(CurrentProfile))
 }
 
 ; ========================================
